@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "aoc",
+    "direction",
+    "coord_2d",
+    "grid",
+    "span_1d",
+    "utils",
+]
+
+[workspace.dependencies]
+itertools = "0.13.0"
+num = "0.4.3"
+rayon = "1.10.0"
+regex = "1.11.1"
+thiserror = "2.0.4"
