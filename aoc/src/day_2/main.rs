@@ -15,12 +15,27 @@ fn main() {
     println!("part 2: {}", part_2());
 }
 
-fn part_1(_spans: Vec<Span1D<usize>>) -> usize {
-    0
+fn part_1(spans: Vec<Span1D<usize>>) -> usize {
+    spans
+        .into_iter()
+        .map(|span| span.iter().filter(|x| is_invalid(*x)).sum::<usize>())
+        .sum()
 }
 
 fn part_2() -> usize {
     0
+}
+
+fn is_invalid(id: usize) -> bool {
+    let s = id.to_string();
+    let n_chars = s.len();
+
+    if n_chars % 2 == 1 {
+        false
+    } else {
+        let midpoint = n_chars / 2;
+        s[..midpoint] == s[midpoint..]
+    }
 }
 
 fn parse_span(s: String) -> Span1D<usize> {
@@ -51,5 +66,12 @@ mod tests {
     fn test_parse_input() {
         let example = "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124";
         parse_input(example.split(',').map(|x| x.to_string()));
+    }
+
+    #[test]
+    fn test_is_invalid() {
+        assert!(is_invalid(1010));
+        assert!(is_invalid(1188511885));
+        assert!(!is_invalid(101));
     }
 }

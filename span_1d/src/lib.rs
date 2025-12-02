@@ -32,6 +32,10 @@ where
         }
     }
 
+    pub fn iter(&self) -> std::ops::Range<T> {
+        self.start..self.end()
+    }
+
     pub fn increment(&mut self) {
         self.len += 1
     }
