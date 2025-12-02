@@ -1,6 +1,6 @@
 use num::Integer;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Span1D<T: Integer + Copy + TryFrom<usize>>
 where
     <T as TryFrom<usize>>::Error: std::fmt::Debug,
@@ -18,6 +18,22 @@ where
         <T as TryFrom<usize>>::Error: std::fmt::Debug,
     {
         Self { start, len }
+    }
+
+    pub fn from_start_end_inclusive(start: T, end: T) -> Self
+    where
+        <T as TryFrom<usize>>::Error: std::fmt::Debug,
+        usize: From<T>,
+    {
+        let len: usize = (end - start).into();
+        Self {
+            start,
+            len: len + 1,
+        }
+    }
+
+    pub fn iter(&self) -> std::ops::Range<T> {
+        self.start..self.end()
     }
 
     pub fn increment(&mut self) {
