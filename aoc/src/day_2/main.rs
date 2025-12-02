@@ -1,5 +1,5 @@
 use span_1d::Span1D;
-use utils::AocBufReader;
+use utils::{factors, AocBufReader};
 
 fn main() {
     println!(
@@ -12,21 +12,33 @@ fn main() {
                 .map(|x| x.to_string())
         ))
     );
-    println!("part 2: {}", part_2());
+    println!(
+        "part 2: {}",
+        part_2(parse_input(
+            AocBufReader::from_string("aoc/src/day_2/data/part_1.txt")
+                .next()
+                .unwrap()
+                .split(',')
+                .map(|x| x.to_string())
+        ))
+    );
 }
 
 fn part_1(spans: Vec<Span1D<usize>>) -> usize {
     spans
         .into_iter()
-        .map(|span| span.iter().filter(|x| is_invalid(*x)).sum::<usize>())
+        .map(|span| span.iter().filter(|x| is_invalid_part_1(*x)).sum::<usize>())
         .sum()
 }
 
-fn part_2() -> usize {
-    0
+fn part_2(spans: Vec<Span1D<usize>>) -> usize {
+    spans
+        .into_iter()
+        .map(|span| span.iter().filter(|x| is_invalid_part_2(*x)).sum::<usize>())
+        .sum()
 }
 
-fn is_invalid(id: usize) -> bool {
+fn is_invalid_part_1(id: usize) -> bool {
     let s = id.to_string();
     let n_chars = s.len();
 
@@ -36,6 +48,35 @@ fn is_invalid(id: usize) -> bool {
         let midpoint = n_chars / 2;
         s[..midpoint] == s[midpoint..]
     }
+}
+
+fn is_repeated_substring(s: &str, len: usize) -> bool {
+    let mut start = 0usize;
+    let mut end = len;
+
+    let to_match = &s[start..end];
+
+    while end <= s.len() {
+        if &s[start..end] != to_match {
+            return false;
+        }
+        start += len;
+        end += len;
+    }
+    true
+}
+
+fn is_invalid_part_2(id: usize) -> bool {
+    let mut divisors = factors(id.to_string().len());
+    divisors.pop(); // don't consider a single repetition invalid
+
+    let s = id.to_string();
+    for divisor in divisors.into_iter() {
+        if is_repeated_substring(&s[..], divisor) {
+            return true;
+        }
+    }
+    false
 }
 
 fn parse_span(s: String) -> Span1D<usize> {
@@ -69,9 +110,16 @@ mod tests {
     }
 
     #[test]
-    fn test_is_invalid() {
-        assert!(is_invalid(1010));
-        assert!(is_invalid(1188511885));
-        assert!(!is_invalid(101));
+    fn test_is_invalid_part_1() {
+        assert!(is_invalid_part_1(1010));
+        assert!(is_invalid_part_1(1188511885));
+        assert!(!is_invalid_part_1(101));
+    }
+
+    #[test]
+    fn test_is_invalid_part_2() {
+        assert!(is_invalid_part_2(1188511885));
+        assert!(is_invalid_part_2(824824824));
+        assert!(!is_invalid_part_2(101));
     }
 }

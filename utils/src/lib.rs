@@ -201,6 +201,26 @@ fn backpropagate<N: Eq + PartialEq + Hash + Clone + Debug>(
     }
 }
 
+pub fn factors(n: usize) -> Vec<usize> {
+    let mut result: HashSet<usize> = HashSet::new();
+    let mut candidate = 1usize;
+    loop {
+        if candidate * candidate > n {
+            break;
+        }
+
+        if n % candidate == 0 {
+            result.insert(candidate);
+            result.insert(n / candidate);
+        }
+
+        candidate += 1;
+    }
+    let mut result_vec: Vec<usize> = result.into_iter().collect();
+    result_vec.sort();
+    result_vec
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,5 +232,10 @@ mod tests {
             parse_iter::<usize, _>(buffer).collect::<Vec<_>>(),
             vec![1, 2, 3, 4]
         );
+    }
+
+    #[test]
+    fn test_factors() {
+        assert_eq!(factors(16), vec![1, 2, 4, 8, 16])
     }
 }
