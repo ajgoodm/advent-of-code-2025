@@ -221,6 +221,25 @@ pub fn factors(n: usize) -> Vec<usize> {
     result_vec
 }
 
+/// Return the index of the largest element in non-empty Vec<T>
+/// alongside the largest element
+pub fn index_of_max<T: Ord + Debug>(slice: &[T]) -> (usize, &T) {
+    if slice.is_empty() {
+        panic!("called index_of_max on an empty vec")
+    }
+
+    let mut max_val = &slice[0];
+    let mut max_val_idx = 0usize;
+
+    for (idx, val) in slice.iter().enumerate() {
+        if val > max_val {
+            max_val = val;
+            max_val_idx = idx;
+        }
+    }
+    (max_val_idx, max_val)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -237,5 +256,10 @@ mod tests {
     #[test]
     fn test_factors() {
         assert_eq!(factors(16), vec![1, 2, 4, 8, 16])
+    }
+
+    #[test]
+    fn test_index_of_max() {
+        assert_eq!(index_of_max(&vec![0, 1, 3, 2]), (2, &3))
     }
 }
