@@ -69,13 +69,12 @@ where
     /// Any input spans that itersect each other are merged
     /// Continue until all spans in the collection are disjoint
     /// and return the new collection
-    pub fn melt(spans: Vec<Self>) -> Vec<Self>
+    pub fn melt(mut to_melt: Vec<Self>) -> Vec<Self>
     where
         <T as TryFrom<usize>>::Error: std::fmt::Debug,
         usize: From<T>,
     {
         let mut disjoint: Vec<Self> = vec![];
-        let mut to_melt = spans;
         while let Some(first) = to_melt.pop() {
             let mut intersecting: Vec<Self> = vec![];
             let mut not_intersecting: Vec<Self> = vec![];
