@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-coord_2d = { path =  "../coord_2d" }
-direction = { path =  "../direction" }
+coord_2d = { path = "../coord_2d" }
+coord_3d = { path = "../coord_3d" }
+direction = { path = "../direction" }
 grid = { path = "../grid" }
 itertools = { workspace = true }
 utils = { path = "../utils" }
@@ -41,3 +42,7 @@ path = "src/day_6/main.rs"
 [[bin]]
 name = "day_7"
 path = "src/day_7/main.rs"
+
+[[bin]]
+name = "day_8"
+path = "src/day_8/main.rs"
