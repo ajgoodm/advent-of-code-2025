@@ -240,6 +240,16 @@ pub fn index_of_max<T: Ord + Debug>(slice: &[T]) -> (usize, &T) {
     (max_val_idx, max_val)
 }
 
+pub fn pop_set<T: Clone + Eq + Hash>(set: &mut HashSet<T>) -> Option<T> {
+    match set.iter().next().cloned() {
+        Some(item) => {
+            set.remove(&item);
+            Some(item)
+        }
+        None => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

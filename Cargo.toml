@@ -5,6 +5,7 @@ members = [
     "aoc",
     "direction",
     "coord_2d",
+    "coord_2d",
     "grid",
     "span_1d",
     "utils",
