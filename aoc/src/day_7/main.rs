@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use coord_2d::Coord2D;
 use grid::Grid;
@@ -12,11 +12,13 @@ fn main() {
         )))
         .part_1()
     );
-    println!("part 2: {}", part_2());
-}
-
-fn part_2() -> usize {
-    0
+    println!(
+        "part 1: {}",
+        TachyonManifold::new(Grid::from_line_iter(AocBufReader::from_string(
+            "aoc/src/day_7/data/part_1.txt"
+        )))
+        .part_2()
+    );
 }
 
 struct TachyonManifold {
@@ -28,7 +30,7 @@ impl TachyonManifold {
         Self { grid }
     }
 
-    fn part_1(self) -> usize {
+    fn part_1(&self) -> usize {
         let splitters = self.grid.find('^');
         let mut result = 0usize;
 
@@ -54,6 +56,46 @@ impl TachyonManifold {
         }
 
         result
+    }
+
+    fn part_2(&self) -> usize {
+        let start = self.grid.find_one('S');
+
+        // in classic Advent of Code fashion, this is too slow to do recursively
+        // without memoization
+        let mut cache: HashMap<(usize, usize), usize> = HashMap::new();
+        self.count_timelines(1usize, start.col, &mut cache)
+    }
+
+    fn count_timelines(
+        &self,
+        row_idx: usize,
+        col_idx: usize,
+        cache: &mut HashMap<(usize, usize), usize>,
+    ) -> usize {
+        if let Some(val) = cache.get(&(row_idx, col_idx)) {
+            return *val;
+        }
+
+        if row_idx == self.grid.n_rows - 1 {
+            return 1usize;
+        }
+
+        let is_splitter = self.grid.get(&Coord2D::new(row_idx, col_idx)).unwrap() == '^';
+        let mut n_paths = 0usize;
+        if is_splitter {
+            if col_idx > 0 {
+                n_paths += self.count_timelines(row_idx + 1, col_idx - 1, cache)
+            }
+            if col_idx < self.grid.n_cols - 1 {
+                n_paths += self.count_timelines(row_idx + 1, col_idx + 1, cache)
+            }
+        } else {
+            n_paths += self.count_timelines(row_idx + 1, col_idx, cache)
+        }
+
+        cache.insert((row_idx, col_idx), n_paths);
+        n_paths
     }
 }
 
@@ -86,5 +128,32 @@ mod tests {
             .map(|x| x.to_string()),
         );
         assert_eq!(TachyonManifold::new(grid).part_1(), 21)
+    }
+
+    #[test]
+    fn test_part2() {
+        let grid: Grid<char> = Grid::from_line_iter(
+            [
+                ".......S.......",
+                "...............",
+                ".......^.......",
+                "...............",
+                "......^.^......",
+                "...............",
+                ".....^.^.^.....",
+                "...............",
+                "....^.^...^....",
+                "...............",
+                "...^.^...^.^...",
+                "...............",
+                "..^...^.....^..",
+                "...............",
+                ".^.^.^.^.^...^.",
+                "...............",
+            ]
+            .into_iter()
+            .map(|x| x.to_string()),
+        );
+        assert_eq!(TachyonManifold::new(grid).part_2(), 40)
     }
 }
