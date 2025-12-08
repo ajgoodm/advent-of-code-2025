@@ -29,18 +29,29 @@ fn part_1(coords: Vec<Coord3D<usize>>, n_connections: usize) -> usize {
     let clique_sizes = christmas_graph.click_sizes();
     clique_sizes[0] * clique_sizes[1] * clique_sizes[2]
 }
+
 fn part_2(coords: Vec<Coord3D<usize>>) -> usize {
-    // FIX-ME: This runs in about 2-3 minutes
-    // We should be able to fix this so we don't re-calculate the first clique every time.
-    // But to be honest, we probably won't
-    let mut n_connections: usize = 1;
+    let n_nodes = coords.len();
+
+    // let's do a binary search
+    let mut min_connections: usize = 1;
+    let mut max_connections = n_nodes * (n_nodes - 1) / 2;
     loop {
+        let n_connections =
+            std::cmp::max((min_connections + max_connections) / 2, min_connections + 1);
         let (christmas_graph, last_edge) = ChristmasGraph::new(coords.clone(), n_connections);
+
         if christmas_graph.is_one_clique() {
-            let (left, right) = last_edge;
-            return left.x * right.x;
+            // we have "too many" connections
+            if max_connections == min_connections + 1 {
+                let (left, right) = last_edge;
+                return left.x * right.x;
+            }
+            max_connections = n_connections;
+        } else {
+            // we have multiple cliques; not enough collections
+            min_connections = n_connections;
         }
-        n_connections += 1;
     }
 }
 
@@ -92,8 +103,11 @@ impl ChristmasGraph {
             .cloned()
             .fold(vec![], |mut vec, item| {
                 let (left, right) = item;
-                vec.push(left);
-                vec.push(right);
+                if &left == node {
+                    vec.push(right);
+                } else {
+                    vec.push(left);
+                }
                 vec
             })
     }
