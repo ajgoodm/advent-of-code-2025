@@ -20,6 +20,13 @@ impl<T: Integer + PartialOrd + Eq + Copy + Hash> Coord2D<T> {
         Self { row, col }
     }
 
+    pub fn swap_coords(self) -> Self {
+        Self {
+            row: self.col,
+            col: self.row,
+        }
+    }
+
     pub fn mul_scalar(&self, v: T) -> Self {
         Self::new(self.row * v, self.col * v)
     }
