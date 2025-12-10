@@ -52,6 +52,10 @@ where
         !(self.end() <= other.start || self.start >= other.end())
     }
 
+    /// WARNING: this function was for day 9 specifically
+    ///  and behaves in a maybe unexpected way for spans
+    /// with length 1 (in that we necessarily can't decrement
+    /// symmetrically)
     pub fn decrement(&self) -> Self {
         match self.len {
             0 => self.clone(),
