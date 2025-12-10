@@ -20,12 +20,41 @@ impl<T: Integer + PartialOrd + Eq + Copy + Hash> Coord2D<T> {
         Self { row, col }
     }
 
+    pub fn swap_coords(self) -> Self {
+        Self {
+            row: self.col,
+            col: self.row,
+        }
+    }
+
     pub fn mul_scalar(&self, v: T) -> Self {
         Self::new(self.row * v, self.col * v)
     }
 
     pub fn is_nonnegative(&self) -> bool {
         self.row >= T::zero() && self.col >= T::zero()
+    }
+
+    /// Given &self and another &Coord2D<T>, calculate the
+    /// area covered by the rectangle in which the two points
+    /// are the corners (inclusive)
+    pub fn rectangle_area(&self, other: &Self) -> T {
+        let n_rows = {
+            if self.row >= other.row {
+                self.row - other.row + T::one() // the length; even if these are equal, we want to return 1
+            } else {
+                other.row - self.row + T::one()
+            }
+        };
+        let n_cols = {
+            if self.col >= other.col {
+                self.col - other.col + T::one()
+            } else {
+                other.col - self.col + T::one()
+            }
+        };
+
+        n_rows * n_cols
     }
 
     pub fn manhattan_distance(&self, other: &Self) -> T {
