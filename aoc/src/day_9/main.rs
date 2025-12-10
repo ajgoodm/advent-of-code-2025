@@ -101,8 +101,16 @@ fn part_2(tiles: Vec<Coord2D<usize>>) -> usize {
             );
 
             for hz in horizontal_lines.iter() {
+                // if any horizontal line in our polygon intersects the right or left line,
+                // then this rectangle isn't contained in our patch
                 if (left.is_some() && hz.intersects(left.as_ref().unwrap()))
                     || (right.is_some() && hz.intersects(right.as_ref().unwrap()))
+                    // if horizontal line has the same horizontal range as the
+                    // candidate rectangle and is strictly contained in the
+                    // rectangle's vertical range, then it doesn't "intersect"
+                    // the vertical lines by our discrete definition of intersect,
+                    // but it does bisect our rectangle into two nonempty parts,
+                    // one of which must be exterior, so we chuck this candidate
                     || (right.is_some()
                         && right
                             .as_ref()
@@ -123,6 +131,7 @@ fn part_2(tiles: Vec<Coord2D<usize>>) -> usize {
                 }
             }
 
+            // same, but analogous for vertical lines in our polygon
             for vl in vertical_lines.iter() {
                 if (top.is_some() && vl.intersects(top.as_ref().unwrap()))
                     || (bottom.is_some() && vl.intersects(bottom.as_ref().unwrap()))
@@ -146,6 +155,8 @@ fn part_2(tiles: Vec<Coord2D<usize>>) -> usize {
                 }
             }
 
+            // if the candidate rectangle strictly contains any polygon vertex,
+            // then the candidate isn't contained in the polygon and we reject it
             for tile in tiles.iter() {
                 if left.is_some()
                     && left
