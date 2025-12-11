@@ -91,6 +91,11 @@ fn part_2_inner(
     result
 }
 
+/// Sigh this is a sneaky linear system optimization problem, and most folks
+/// on the internet have used solvers in their language of choice. I'll
+/// try to find a Rust solver and see if I can use it here. I've re-coded
+/// different flavors of this solution like 4 times and they all time-out
+/// on the list of data
 fn part_2(iter: impl Iterator<Item = String>) -> usize {
     let mut cache = HashMap::new();
     iter.map(|line| {
