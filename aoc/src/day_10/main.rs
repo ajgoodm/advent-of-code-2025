@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use utils::{shortest_path_length, AocBufReader, DijkstraSearchable};
+use utils::{pop_set, shortest_path_length, AocBufReader, DijkstraSearchable};
 
 fn main() {
     println!(
@@ -26,20 +26,82 @@ fn part_1(iter: impl Iterator<Item = String>) -> usize {
     .sum()
 }
 
+/// For the first button, iterate through its possible values
+/// For each value, iterate through the second button's possible values
+/// and so on...
+fn part_2_inner(
+    machine: Machine,
+    target: Vec<usize>,
+    cache: &mut HashMap<Vec<usize>, Option<usize>>,
+) -> Option<usize> {
+    if target.iter().all(|x| *x == 0) {
+        return Some(0);
+    }
+
+    if let Some(val) = cache.get(&target) {
+        return *val;
+    }
+
+    if machine.n_buttons() == 1 {
+        let (_empty_machine, last_button) = machine.pop_button().unwrap();
+
+        let mut values_at_button_idxs: HashSet<usize> = HashSet::new();
+        let mut values_at_not_button_idxs: HashSet<usize> = HashSet::new();
+        for (joltage_idx, target_value) in target.iter().enumerate() {
+            if last_button.contains(&joltage_idx) {
+                values_at_button_idxs.insert(*target_value);
+            } else {
+                values_at_not_button_idxs.insert(*target_value);
+            }
+        }
+
+        if values_at_not_button_idxs.len() > 1 {
+            return None;
+        }
+        if values_at_not_button_idxs.len() == 1
+            && pop_set(&mut values_at_not_button_idxs) != Some(0)
+        {
+            return None;
+        }
+
+        if values_at_button_idxs.len() != 1 {
+            return None;
+        }
+        return pop_set(&mut values_at_button_idxs);
+    }
+
+    let (smaller_machine, button) = machine.pop_button().unwrap();
+    let max_presses = button
+        .iter()
+        .map(|joltage_idx| target[*joltage_idx])
+        .min()
+        .unwrap();
+
+    let result = (0..=max_presses)
+        .filter_map(|n_presses| {
+            let mut after_presses = target.clone();
+            for joltage_idx in button.iter() {
+                after_presses[*joltage_idx] -= n_presses;
+            }
+            part_2_inner(smaller_machine.clone(), after_presses, cache).map(|val| val + n_presses)
+        })
+        .min();
+
+    cache.insert(target, result);
+    result
+}
+
 fn part_2(iter: impl Iterator<Item = String>) -> usize {
+    let mut cache = HashMap::new();
     iter.map(|line| {
-        println!("starting: {}", line);
-        let mut cache = HashMap::new();
+        println!("{}", line);
         let (_, target, machine) = Machine::from_string(line);
-        let target_len = target.len();
-        let start: Vec<usize> = (0..target_len).map(|_| 0).collect();
-        let joltage_machine = JoltageMachine::from_part_1_machine(machine, target);
-        depth_first_search(&joltage_machine, start, 0, &mut cache).unwrap()
+        part_2_inner(machine, target, &mut cache).unwrap()
     })
     .sum()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Machine {
     buttons: Vec<Vec<usize>>,
 }
@@ -88,6 +150,15 @@ impl Machine {
 
         result
     }
+
+    fn n_buttons(&self) -> usize {
+        self.buttons.len()
+    }
+
+    fn pop_button(&self) -> Option<(Self, Vec<usize>)> {
+        let mut buttons = self.buttons.clone();
+        buttons.pop().map(|last| (Self { buttons }, last))
+    }
 }
 
 impl DijkstraSearchable for Machine {
@@ -105,67 +176,12 @@ impl DijkstraSearchable for Machine {
     }
 }
 
-struct JoltageMachine {
-    buttons: Vec<Vec<usize>>,
-    target: Vec<usize>,
-}
-
-impl JoltageMachine {
-    fn n_buttons(&self) -> usize {
-        self.buttons.len()
-    }
-
-    fn push_button(&self, joltage: &[usize], button_idx: usize) -> Vec<usize> {
-        let mut result = joltage.to_owned();
-        for joltage_idx in self.buttons[button_idx].iter() {
-            result[*joltage_idx] += 1;
-        }
-
-        result
-    }
-
-    fn target_is_reachable_from(&self, start: &[usize]) -> bool {
-        self.target.iter().zip(start.iter()).all(|(t, v)| t >= v)
-    }
-
-    fn from_part_1_machine(machine: Machine, target: Vec<usize>) -> Self {
-        let mut buttons = machine.buttons;
-        buttons.sort_by_key(|x| x.iter().sum::<usize>());
-        buttons.reverse(); // sort from longest to shortest
-        Self { buttons, target }
-    }
-}
-
-fn depth_first_search(
-    machine: &JoltageMachine,
-    start: Vec<usize>,
-    cost_to_reach_start: usize,
-    cache: &mut HashMap<Vec<usize>, Option<usize>>,
-) -> Option<usize> {
-    if start == machine.target {
-        return Some(cost_to_reach_start);
-    }
-
-    if let Some(val) = cache.get(&start) {
-        return *val;
-    }
-
-    let result = (0..machine.n_buttons())
-        .map(|button_idx| machine.push_button(&start, button_idx))
-        .filter(|next| machine.target_is_reachable_from(next))
-        .filter_map(|next| depth_first_search(machine, next, cost_to_reach_start + 1, cache))
-        .min();
-
-    cache.insert(start, result);
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn part_1_bits() {
+    fn test_part_1_bits() {
         let (lights, _, machine) =
             Machine::from_string("[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}".to_string());
         let next = machine.push_button(&lights, 1);
@@ -173,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn part_1_djikstra() {
+    fn test_part_1_djikstra() {
         let (target, _, machine) =
             Machine::from_string("[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}".to_string());
         let mut targets: HashSet<Vec<char>> = HashSet::new();
@@ -183,6 +199,14 @@ mod tests {
             shortest_path_length(machine, Vec::from_iter("....".chars()), targets),
             Some(2)
         )
+    }
+
+    #[test]
+    fn test_part_2_inner() {
+        let mut cache = HashMap::new();
+        let (_, target, machine) =
+            Machine::from_string("[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}".to_string());
+        assert_eq!(part_2_inner(machine, target, &mut cache), Some(10));
     }
 
     #[test]
