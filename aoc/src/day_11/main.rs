@@ -6,15 +6,18 @@ fn main() {
     let server_rack =
         ServerRack::from_lines(AocBufReader::from_string("aoc/src/day_11/data/part_1.txt"));
     println!("part 1: {}", part_1(&server_rack));
-    println!("part 1: {}", part_2(&server_rack));
+    println!("part 2: {}", part_2(&server_rack));
 }
 
 fn part_1(server_rack: &ServerRack) -> usize {
-    server_rack.n_paths("you", "out")
+    server_rack.n_paths("you", "end", &mut HashMap::new())
 }
 
-fn part_2(_server_rack: &ServerRack) -> usize {
-    0
+fn part_2(server_rack: &ServerRack) -> usize {
+    let mut cache = HashMap::new();
+    server_rack.n_paths("svr", "fft", &mut cache)
+        * server_rack.n_paths("fft", "dac", &mut cache)
+        * server_rack.n_paths("dac", "out", &mut cache)
 }
 
 #[derive(Debug)]
@@ -44,18 +47,32 @@ impl ServerRack {
         self.graph.get(node).unwrap()
     }
 
-    fn n_paths(&self, start: &str, end: &str) -> usize {
+    fn n_paths(
+        &self,
+        start: &str,
+        end: &str,
+        cache: &mut HashMap<(String, String), usize>,
+    ) -> usize {
+        if let Some(cached) = cache.get(&(start.to_owned(), end.to_owned())) {
+            return *cached;
+        }
+
         let neighbors = self.neighbors(start);
-        neighbors
+        let result = neighbors
             .iter()
             .map(|next| {
                 if next == end {
                     1
+                } else if next == "out" {
+                    0
                 } else {
-                    self.n_paths(next, end)
+                    self.n_paths(next, end, cache)
                 }
             })
-            .sum()
+            .sum();
+
+        cache.insert((start.to_owned(), end.to_owned()), result);
+        result
     }
 }
 
