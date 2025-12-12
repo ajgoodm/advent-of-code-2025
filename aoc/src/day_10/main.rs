@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use utils::{pop_set, shortest_path_length, AocBufReader, DijkstraSearchable};
+use itertools::Itertools;
+
+use utils::{shortest_path_length, AocBufReader, DijkstraSearchable};
 
 fn main() {
     println!(
@@ -29,66 +31,44 @@ fn part_1(iter: impl Iterator<Item = String>) -> usize {
 /// For the first button, iterate through its possible values
 /// For each value, iterate through the second button's possible values
 /// and so on...
-fn part_2_inner(
-    machine: Machine,
-    target: Vec<usize>,
-    cache: &mut HashMap<Vec<usize>, Option<usize>>,
-) -> Option<usize> {
+fn part_2_inner(machine: &Machine, target: &[usize]) -> Option<usize> {
     if target.iter().all(|x| *x == 0) {
         return Some(0);
     }
 
-    if let Some(val) = cache.get(&target) {
-        return *val;
+    let target_indicators = joltage_to_indicators(target);
+    match machine.combinations_for_indicators.get(&target_indicators) {
+        Some(combinations) => combinations
+            .iter()
+            .filter(|button_set| {
+                let mut to_subtract = new_zeros(machine.n_lights);
+                for button in button_set.iter() {
+                    for joltage_idx in button.iter() {
+                        to_subtract[*joltage_idx] += 1;
+                    }
+                }
+                target
+                    .iter()
+                    .zip(to_subtract.iter())
+                    .all(|(t, minus)| *t >= *minus)
+            })
+            .filter_map(|button_set| {
+                let mut new_target = target.to_owned();
+                for button in button_set.iter() {
+                    for joltage_idx in button.iter() {
+                        new_target[*joltage_idx] -= 1;
+                    }
+                }
+
+                for joltage in new_target.iter_mut() {
+                    *joltage /= 2;
+                }
+
+                part_2_inner(machine, &new_target).map(|value| 2 * value + button_set.len())
+            })
+            .min(),
+        None => None,
     }
-
-    if machine.n_buttons() == 1 {
-        let (_empty_machine, last_button) = machine.pop_button().unwrap();
-
-        let mut values_at_button_idxs: HashSet<usize> = HashSet::new();
-        let mut values_at_not_button_idxs: HashSet<usize> = HashSet::new();
-        for (joltage_idx, target_value) in target.iter().enumerate() {
-            if last_button.contains(&joltage_idx) {
-                values_at_button_idxs.insert(*target_value);
-            } else {
-                values_at_not_button_idxs.insert(*target_value);
-            }
-        }
-
-        if values_at_not_button_idxs.len() > 1 {
-            return None;
-        }
-        if values_at_not_button_idxs.len() == 1
-            && pop_set(&mut values_at_not_button_idxs) != Some(0)
-        {
-            return None;
-        }
-
-        if values_at_button_idxs.len() != 1 {
-            return None;
-        }
-        return pop_set(&mut values_at_button_idxs);
-    }
-
-    let (smaller_machine, button) = machine.pop_button().unwrap();
-    let max_presses = button
-        .iter()
-        .map(|joltage_idx| target[*joltage_idx])
-        .min()
-        .unwrap();
-
-    let result = (0..=max_presses)
-        .filter_map(|n_presses| {
-            let mut after_presses = target.clone();
-            for joltage_idx in button.iter() {
-                after_presses[*joltage_idx] -= n_presses;
-            }
-            part_2_inner(smaller_machine.clone(), after_presses, cache).map(|val| val + n_presses)
-        })
-        .min();
-
-    cache.insert(target, result);
-    result
 }
 
 /// Sigh this is a sneaky linear system optimization problem, and most folks
@@ -97,18 +77,35 @@ fn part_2_inner(
 /// different flavors of this solution like 4 times and they all time-out
 /// on the list of data
 fn part_2(iter: impl Iterator<Item = String>) -> usize {
-    let mut cache = HashMap::new();
     iter.map(|line| {
-        println!("{}", line);
-        let (_, target, machine) = Machine::from_string(line);
-        part_2_inner(machine, target, &mut cache).unwrap()
+        let (_, target, machine) = Machine::from_string(line.clone());
+        part_2_inner(&machine, &target).unwrap()
     })
     .sum()
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+type Button = Vec<usize>;
+type ButtonCollection = Vec<Button>;
+
+#[derive(Debug, Clone, PartialEq)]
 struct Machine {
-    buttons: Vec<Vec<usize>>,
+    n_lights: usize,
+    buttons: Vec<Button>,
+    combinations_for_indicators: HashMap<Vec<char>, Vec<ButtonCollection>>,
+}
+
+fn new_zeros(len: usize) -> Vec<usize> {
+    (0..len).map(|_| 0).collect()
+}
+
+fn joltage_to_indicators(joltage: &[usize]) -> Vec<char> {
+    joltage
+        .iter()
+        .map(|x| match *x % 2 == 0 {
+            true => '.',
+            false => '#',
+        })
+        .collect()
 }
 
 impl Machine {
@@ -139,7 +136,36 @@ impl Machine {
             }
         }
 
-        (indicator_lights, joltage, Self { buttons })
+        let button_powerset: Vec<ButtonCollection> = (0usize..=(buttons.len()))
+            .flat_map(|n_buttons| buttons.iter().cloned().combinations(n_buttons))
+            .collect();
+
+        let n_lights = indicator_lights.len();
+        let mut combinations_for_indicators: HashMap<Vec<char>, Vec<ButtonCollection>> =
+            HashMap::new();
+        for button_collection in button_powerset.into_iter() {
+            let mut joltage = new_zeros(n_lights);
+            for button in button_collection.iter() {
+                for joltage_idx in button.iter() {
+                    joltage[*joltage_idx] += 1;
+                }
+            }
+            let indicators = joltage_to_indicators(&joltage);
+            combinations_for_indicators
+                .entry(indicators)
+                .or_default()
+                .push(button_collection)
+        }
+
+        (
+            indicator_lights,
+            joltage,
+            Self {
+                n_lights,
+                buttons,
+                combinations_for_indicators,
+            },
+        )
     }
 
     fn push_button(&self, lights: &[char], button_idx: usize) -> Vec<char> {
@@ -154,15 +180,6 @@ impl Machine {
         }
 
         result
-    }
-
-    fn n_buttons(&self) -> usize {
-        self.buttons.len()
-    }
-
-    fn pop_button(&self) -> Option<(Self, Vec<usize>)> {
-        let mut buttons = self.buttons.clone();
-        buttons.pop().map(|last| (Self { buttons }, last))
     }
 }
 
@@ -208,10 +225,17 @@ mod tests {
 
     #[test]
     fn test_part_2_inner() {
-        let mut cache = HashMap::new();
         let (_, target, machine) =
             Machine::from_string("[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}".to_string());
-        assert_eq!(part_2_inner(machine, target, &mut cache), Some(10));
+        assert_eq!(part_2_inner(&machine, &target), Some(10));
+    }
+
+    #[test]
+    fn test_debug_panic() {
+        let (_, target, machine) = Machine::from_string(
+            "[####.] (0,2,3,4) (0,1,2,3) (1,4) {19,156,19,19,149}".to_string(),
+        );
+        part_2_inner(&machine, &target).unwrap();
     }
 
     #[test]
