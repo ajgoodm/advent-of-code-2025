@@ -98,6 +98,6 @@ mod tests {
             .into_iter()
             .map(|x| x.to_string()),
         );
-        assert_eq!(server_rack.n_paths("you", "out"), 5);
+        assert_eq!(server_rack.n_paths("you", "out", &mut HashMap::new()), 5);
     }
 }
