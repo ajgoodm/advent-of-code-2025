@@ -37,28 +37,20 @@ fn part_2_inner(machine: &Machine, target: &[usize]) -> Option<usize> {
     }
 
     let target_indicators = joltage_to_indicators(target);
-    if target_indicators.iter().all(|x| *x == '.') {
-        let mut new_target = target.to_owned();
-        for joltage in new_target.iter_mut() {
-            *joltage /= 2
-        }
-        match part_2_inner(machine, &new_target) {
-            Some(value) => return Some(2 * value),
-            None => return None,
-        }
-    }
-
     match machine.combinations_for_indicators.get(&target_indicators) {
         Some(combinations) => combinations
             .iter()
             .filter(|button_set| {
-                let mut zeros = new_zeros(machine.n_lights);
+                let mut to_subtract = new_zeros(machine.n_lights);
                 for button in button_set.iter() {
                     for joltage_idx in button.iter() {
-                        zeros[*joltage_idx] += 1;
+                        to_subtract[*joltage_idx] += 1;
                     }
                 }
-                target.iter().zip(zeros.iter()).all(|(t, z)| *t >= *z)
+                target
+                    .iter()
+                    .zip(to_subtract.iter())
+                    .all(|(t, minus)| *t >= *minus)
             })
             .filter_map(|button_set| {
                 let mut new_target = target.to_owned();
@@ -87,13 +79,7 @@ fn part_2_inner(machine: &Machine, target: &[usize]) -> Option<usize> {
 fn part_2(iter: impl Iterator<Item = String>) -> usize {
     iter.map(|line| {
         let (_, target, machine) = Machine::from_string(line.clone());
-        match part_2_inner(&machine, &target) {
-            Some(result) => result,
-            None => {
-                println!("failed: {}", line);
-                0
-            }
-        }
+        part_2_inner(&machine, &target).unwrap()
     })
     .sum()
 }
@@ -150,7 +136,7 @@ impl Machine {
             }
         }
 
-        let button_powerset: Vec<ButtonCollection> = (1usize..=(buttons.len()))
+        let button_powerset: Vec<ButtonCollection> = (0usize..=(buttons.len()))
             .flat_map(|n_buttons| buttons.iter().cloned().combinations(n_buttons))
             .collect();
 
@@ -246,8 +232,9 @@ mod tests {
 
     #[test]
     fn test_debug_panic() {
-        let (_, target, machine) =
-            Machine::from_string("[###...##] (1,3,5) (2,6) (1,2,4,6,7) (2,3,4,5,6,7) (1,4) (0,1,2,6,7) {0,39,40,21,36,21,40,20}".to_string());
+        let (_, target, machine) = Machine::from_string(
+            "[####.] (0,2,3,4) (0,1,2,3) (1,4) {19,156,19,19,149}".to_string(),
+        );
         part_2_inner(&machine, &target).unwrap();
     }
 
